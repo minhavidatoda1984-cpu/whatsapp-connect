@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conectar WhatsApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f0a;
+    --surface: #111811;
+    --border: #1e2e1e;
+    --green: #25d366;
+    --green-dim: #1a9e4a;
+    --green-glow: rgba(37,211,102,0.15);
+    --text: #e8f5e8;
+    --text-dim: #6b8f6b;
+    --error: #ff4d4d;
+    --warning: #ffb347;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(37,211,102,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(37,211,102,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Glow blob */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(37,211,102,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 48px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(37,211,102,0.1);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--green-glow);
+    border: 1px solid rgba(37,211,102,0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span {
+    color: var(--green);
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 36px;
+    line-height: 1.5;
+  }
+
+  .field {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  input, select {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+    appearance: none;
+  }
+
+  input:focus, select:focus {
+    border-color: rgba(37,211,102,0.4);
+    background: rgba(37,211,102,0.03);
+    box-shadow: 0 0 0 3px rgba(37,211,102,0.08);
+  }
+
+  input::placeholder { color: var(--text-dim); }
+
+  select option { background: #111811; }
+
+  .btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--green);
+    color: #0a0f0a;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    letter-spacing: 0.3px;
+  }
+
+  .btn:hover { background: #20c05e; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(37,211,102,0.2); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* QR Section */
+  .qr-section {
+    display: none;
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .qr-section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .qr-label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+  }
+
+  .qr-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 24px;
+  }
+
+  .qr-wrapper img {
+    width: 220px;
+    height: 220px;
+    border-radius: 16px;
+    border: 3px solid rgba(37,211,102,0.3);
+    display: block;
+  }
+
+  .qr-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--green);
+    border-style: solid;
+  }
+  .qr-corner.tl { top: -4px; left: -4px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .qr-corner.tr { top: -4px; right: -4px; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .qr-corner.bl { bottom: -4px; left: -4px; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .qr-corner.br { bottom: -4px; right: -4px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .qr-instruction {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .qr-instruction strong { color: var(--text); }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    margin-bottom: 20px;
+  }
+
+  .status-badge.waiting {
+    background: rgba(255,179,71,0.1);
+    border: 1px solid rgba(255,179,71,0.3);
+    color: var(--warning);
+  }
+
+  .status-badge.connected {
+    background: rgba(37,211,102,0.1);
+    border: 1px solid rgba(37,211,102,0.3);
+    color: var(--green);
+  }
+
+  .status-badge.error {
+    background: rgba(255,77,77,0.1);
+    border: 1px solid rgba(255,77,77,0.3);
+    color: var(--error);
+  }
+
+  .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-dim);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-secondary:hover { border-color: rgba(37,211,102,0.3); color: var(--text); }
+
+  .error-msg {
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #ff8080;
+    margin-top: 12px;
+    font-family: 'DM Mono', monospace;
+    display: none;
+  }
+
+  .error-msg.active { display: block; }
+
+  .connected-box {
+    background: rgba(37,211,102,0.06);
+    border: 1px solid rgba(37,211,102,0.2);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .connected-box.active { display: block; }
+  .connected-icon { font-size: 48px; margin-bottom: 12px; }
+  .connected-title { font-size: 20px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+  .connected-desc { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+  .timer {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-dim);
+    margin-top: 16px;
+  }
+
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    33% { content: '.'; }
+    66% { content: '..'; }
+    100% { content: '...'; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">📱</div>
+    <div>
+      <div class="logo-text">WhatsApp Connect</div>
+      <div class="logo-sub">instância segura</div>
+    </div>
+  </div>
+
+  <!-- Login Form -->
+  <div id="loginSection">
+    <h1>Conectar seu<br><span>WhatsApp</span></h1>
+    <p class="subtitle">Insira os dados da sua instância para gerar o QR Code de conexão.</p>
+
+    <div class="field">
+      <label>Tipo de API</label>
+      <select id="apiType">
+        <option value="evolution">Evolution API</option>
+        <option value="uazapi">UAZAPI</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Nome da Instância</label>
+      <input type="text" id="instanceName" placeholder="ex: MINHA_EMPRESA" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label>Senha (nome da instância)</label>
+      <input type="password" id="password" placeholder="••••••••••••" />
+    </div>
+
+    <div id="errorMsg" class="error-msg">Instância ou senha incorretos.</div>
+
+    <button class="btn" onclick="handleLogin()">Gerar QR Code →</button>
+  </div>
+
+  <!-- QR Section -->
+  <div id="qrSection" class="qr-section">
+    <div id="statusBadge" class="status-badge waiting">
+      <div class="pulse"></div>
+      <span id="statusText">Aguardando escaneamento</span>
+    </div>
+
+    <div class="qr-label">Escaneie com seu WhatsApp</div>
+
+    <div class="qr-wrapper" id="qrWrapper">
+      <img id="qrImage" src="" alt="QR Code" />
+      <div class="qr-corner tl"></div>
+      <div class="qr-corner tr"></div>
+      <div class="qr-corner bl"></div>
+      <div class="qr-corner br"></div>
+    </div>
+
+    <p class="qr-instruction">
+      Abra o WhatsApp → <strong>Dispositivos Conectados</strong><br>
+      → <strong>Conectar dispositivo</strong> → Aponte a câmera
+    </p>
+
+    <div class="timer" id="timerText">Verificando conexão<span class="loading-dots"></span></div>
+
+    <button class="btn-secondary" onclick="resetPage()">← Voltar</button>
+  </div>
+
+  <!-- Connected Box -->
+  <div id="connectedBox" class="connected-box">
+    <div class="connected-icon">✅</div>
+    <div class="connected-title">Conectado!</div>
+    <div class="connected-desc">
+      Seu WhatsApp foi conectado com sucesso.<br>
+      O agente já está ativo e pronto para atender.
+    </div>
+    <button class="btn" style="margin-top:24px" onclick="resetPage()">Conectar outra instância</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// CONFIGURAÇÕES — EDITE AQUI
+// =============================================
+const CONFIG = {
+  evolution: {
+    baseUrl: 'https://evolution.naturaisterravida.com.br',
+    apiKey: '94A2203E2279-45C5-84C0-4CB1D6D4E004'
+  },
+  uazapi: {
+    baseUrl: 'https://prosperazap.uazapi.com'
+  }
+};
+// =============================================
+
+let checkInterval = null;
+let currentInstance = '';
+let currentApiType = '';
+let currentToken = '';
+
+async function handleLogin() {
+  const apiType = document.getElementById('apiType').value;
+  const instanceName = document.getElementById('instanceName').value.trim().toUpperCase();
+  const password = document.getElementById('password').value.trim().toUpperCase();
+  const errorMsg = document.getElementById('errorMsg');
+
+  if (!instanceName || !password) {
+    errorMsg.textContent = 'Preencha todos os campos.';
+    errorMsg.classList.add('active');
+    return;
+  }
+
+  // Senha = nome da instância
+  if (password !== instanceName) {
+    errorMsg.textContent = 'Senha incorreta.';
+    errorMsg.classList.add('active');
+    return;
+  }
+
+  errorMsg.classList.remove('active');
+
+  const btn = document.querySelector('#loginSection .btn');
+  btn.disabled = true;
+  btn.textContent = 'Gerando QR Code...';
+
+  try {
+    currentInstance = instanceName;
+    currentApiType = apiType;
+
+    if (apiType === 'evolution') {
+      await loadQREvolution(instanceName);
+    } else {
+      await loadQRUazapi(instanceName);
+    }
+  } catch (e) {
+    errorMsg.textContent = 'Erro ao conectar. Verifique o nome da instância.';
+    errorMsg.classList.add('active');
+    btn.disabled = false;
+    btn.textContent = 'Gerar QR Code →';
+  }
+}
+
+// ---- EVOLUTION API ----
+async function loadQREvolution(instance) {
+  const url = `${CONFIG.evolution.baseUrl}/instance/connect/${instance}`;
+  const res = await fetch(url, {
+    headers: { 'apikey': CONFIG.evolution.apiKey }
+  });
+
+  if (!res.ok) throw new Error('Erro Evolution');
+  const data = await res.json();
+
+  // data.base64 tem o QR em base64
+  const qrBase64 = data.base64 || data.qrcode?.base64;
+  if (!qrBase64) throw new Error('QR não gerado');
+
+  showQR(qrBase64);
+  startCheckingEvolution(instance);
+}
+
+function startCheckingEvolution(instance) {
+  let count = 0;
+  checkInterval = setInterval(async () => {
+    count++;
+    document.getElementById('timerText').innerHTML =
+      `Verificando conexão (${count * 3}s)<span class="loading-dots"></span>`;
+
+    try {
+      const url = `${CONFIG.evolution.baseUrl}/instance/connectionState/${instance}`;
+      const res = await fetch(url, {
+        headers: { 'apikey': CONFIG.evolution.apiKey }
+      });
+      const data = await res.json();
+      const state = data.instance?.state || data.state;
+
+      if (state === 'open' || state === 'connected') {
+        clearInterval(checkInterval);
+        showConnected();
+      }
+    } catch(e) {}
+
+    // Renova QR a cada 30s
+    if (count % 10 === 0) {
+      try { await loadQREvolution(instance); } catch(e) {}
+    }
+
+    if (count > 60) {
+      clearInterval(checkInterval);
+      updateStatus('error', 'Tempo esgotado. Tente novamente.');
+    }
+  }, 3000);
+}
+
+// ---- UAZAPI ----
+async function loadQRUazapi(instance) {
+  // Busca token da instância pelo nome
+  const listUrl = `${CONFIG.uazapi.baseUrl}/instance/list`;
+
+  // Tenta pegar QR direto
+  // Na UAZAPI o QR fica em /instance/qrcode com token da instância
+  // Primeiro precisa encontrar o token pelo nome
+  const res = await fetch(listUrl);
+  if (!res.ok) throw new Error('Erro UAZAPI');
+  const instances = await res.json();
+
+  let found = null;
+  if (Array.isArray(instances)) {
+    found = instances.find(i =>
+      (i.instance_name || i.name || i.instanceName || '').toUpperCase() === instance
+    );
+  }
+
+  if (!found) throw new Error('Instância não encontrada');
+
+  currentToken = found.token || found.instance_token || found.Token;
+
+  const qrUrl = `${CONFIG.uazapi.baseUrl}/instance/qrcode`;
+  const qrRes = await fetch(qrUrl, {
+    headers: { 'token': currentToken }
+  });
+
+  if (!qrRes.ok) throw new Error('Erro ao gerar QR');
+  const qrData = await qrRes.json();
+  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr;
+
+  if (!qrBase64) throw new Error('QR não disponível');
+
+  showQR(qrBase64.startsWith('data:') ? qrBase64 : 'data:image/png;base64,' + qrBase64);
+  startCheckingUazapi();
+}
+
+function startCheckingUazapi() {
+  let count = 0;
+  checkInterval = setInterval(async () => {
+    count++;
+    document.getElementById('timerText').innerHTML =
+      `Verificando conexão (${count * 3}s)<span class="loading-dots"></span>`;
+
+    try {
+      const res = await fetch(`${CONFIG.uazapi.baseUrl}/instance/status`, {
+        headers: { 'token': currentToken }
+      });
+      const data = await res.json();
+      const status = data.status || data.state || data.connectionStatus;
+
+      if (status === 'connected' || status === 'open') {
+        clearInterval(checkInterval);
+        showConnected();
+      }
+    } catch(e) {}
+
+    if (count > 60) {
+      clearInterval(checkInterval);
+      updateStatus('error', 'Tempo esgotado. Tente novamente.');
+    }
+  }, 3000);
+}
+
+// ---- UI HELPERS ----
+function showQR(base64) {
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('qrImage').src = base64.startsWith('data:') ? base64 : 'data:image/png;base64,' + base64;
+  document.getElementById('qrSection').classList.add('active');
+}
+
+function showConnected() {
+  document.getElementById('qrSection').classList.remove('active');
+  document.getElementById('connectedBox').classList.add('active');
+}
+
+function updateStatus(type, text) {
+  const badge = document.getElementById('statusBadge');
+  badge.className = `status-badge ${type}`;
+  document.getElementById('statusText').textContent = text;
+}
+
+function resetPage() {
+  clearInterval(checkInterval);
+  document.getElementById('loginSection').style.display = 'block';
+  document.getElementById('qrSection').classList.remove('active');
+  document.getElementById('connectedBox').classList.remove('active');
+  document.getElementById('instanceName').value = '';
+  document.getElementById('password').value = '';
+  document.getElementById('errorMsg').classList.remove('active');
+  document.querySelector('#loginSection .btn').disabled = false;
+  document.querySelector('#loginSection .btn').textContent = 'Gerar QR Code →';
+}
+
+// Enter key
+document.addEventListener('keypress', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+</script>
+</body>
+</html>
