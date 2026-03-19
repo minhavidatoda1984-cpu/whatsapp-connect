@@ -454,8 +454,8 @@ let currentToken = '';
 
 async function handleLogin() {
   const apiType = document.getElementById('apiType').value;
-  const instanceName = document.getElementById('instanceName').value.trim().toUpperCase();
-  const password = document.getElementById('password').value.trim().toUpperCase();
+  const instanceName = document.getElementById('instanceName').value.trim();
+  const password = document.getElementById('password').value.trim();
   const errorMsg = document.getElementById('errorMsg');
 
   if (!instanceName || !password) {
@@ -487,7 +487,8 @@ async function handleLogin() {
       await loadQRUazapi(instanceName);
     }
   } catch (e) {
-    errorMsg.textContent = 'Erro ao conectar. Verifique o nome da instância.';
+    console.error(e);
+    errorMsg.textContent = 'Erro ao conectar: ' + e.message;
     errorMsg.classList.add('active');
     btn.disabled = false;
     btn.textContent = 'Gerar QR Code →';
@@ -501,7 +502,10 @@ async function loadQREvolution(instance) {
     headers: { 'apikey': CONFIG.evolution.apiKey }
   });
 
-  if (!res.ok) throw new Error('Erro Evolution');
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Erro API (${res.status}): ${errorText.substring(0, 50)}`);
+  }
   const data = await res.json();
 
   // data.base64 tem o QR em base64
