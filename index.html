@@ -499,7 +499,10 @@ async function handleLogin() {
 async function loadQREvolution(instance) {
   const url = `${CONFIG.evolution.baseUrl}/instance/connect/${instance}`;
   const res = await fetch(url, {
-    headers: { 'apikey': CONFIG.evolution.apiKey }
+    headers: { 
+      'apikey': CONFIG.evolution.apiKey,
+      'Authorization': 'Bearer ' + CONFIG.evolution.apiKey
+    }
   });
 
   if (!res.ok) {
@@ -526,7 +529,10 @@ function startCheckingEvolution(instance) {
     try {
       const url = `${CONFIG.evolution.baseUrl}/instance/connectionState/${instance}`;
       const res = await fetch(url, {
-        headers: { 'apikey': CONFIG.evolution.apiKey }
+        headers: { 
+          'apikey': CONFIG.evolution.apiKey,
+          'Authorization': 'Bearer ' + CONFIG.evolution.apiKey
+        }
       });
       const data = await res.json();
       const state = data.instance?.state || data.state;
