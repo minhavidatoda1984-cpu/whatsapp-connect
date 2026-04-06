@@ -384,8 +384,8 @@
     </div>
 
     <div class="field">
-      <label>Token (Hash de Autenticação)</label>
-      <input type="password" id="password" placeholder="Cole o Hash da sua instância" />
+      <label>Senha (nome da instância)</label>
+      <input type="password" id="password" placeholder="••••••••••••" />
     </div>
 
     <div id="errorMsg" class="error-msg">Instância ou senha incorretos.</div>
@@ -438,7 +438,8 @@
 // =============================================
 const CONFIG = {
   evolution: {
-    baseUrl: 'https://evolution.naturaisterravida.com.br'
+    baseUrl: 'https://evolution.naturaisterravida.com.br',
+    apiKey: '94A2203E2279-45C5-84C0-4CB1D6D4E004'
   },
   uazapi: {
     baseUrl: 'https://prosperazap.uazapi.com'
@@ -453,12 +454,19 @@ let currentToken = '';
 
 async function handleLogin() {
   const apiType = document.getElementById('apiType').value;
-  const instanceName = document.getElementById('instanceName').value.trim();
-  const password = document.getElementById('password').value.trim();
+  const instanceName = document.getElementById('instanceName').value.trim().toUpperCase();
+  const password = document.getElementById('password').value.trim().toUpperCase();
   const errorMsg = document.getElementById('errorMsg');
 
   if (!instanceName || !password) {
     errorMsg.textContent = 'Preencha todos os campos.';
+    errorMsg.classList.add('active');
+    return;
+  }
+
+  // Senha = nome da instância
+  if (password !== instanceName) {
+    errorMsg.textContent = 'Senha incorreta.';
     errorMsg.classList.add('active');
     return;
   }
@@ -471,17 +479,15 @@ async function handleLogin() {
 
   try {
     currentInstance = instanceName;
-    currentToken = password;
     currentApiType = apiType;
 
     if (apiType === 'evolution') {
-      await loadQREvolution(instanceName, password);
+      await loadQREvolution(instanceName);
     } else {
       await loadQRUazapi(instanceName);
     }
   } catch (e) {
-    console.error(e);
-    errorMsg.textContent = 'Erro ao conectar: ' + e.message;
+    errorMsg.textContent = 'Erro ao conectar. Verifique o nome da instância.';
     errorMsg.classList.add('active');
     btn.disabled = false;
     btn.textContent = 'Gerar QR Code →';
@@ -489,19 +495,13 @@ async function handleLogin() {
 }
 
 // ---- EVOLUTION API ----
-async function loadQREvolution(instance, token) {
+async function loadQREvolution(instance) {
   const url = `${CONFIG.evolution.baseUrl}/instance/connect/${instance}`;
   const res = await fetch(url, {
-    headers: { 
-      'apikey': token,
-      'Authorization': 'Bearer ' + token
-    }
+    headers: { 'apikey': CONFIG.evolution.apiKey }
   });
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Erro API (${res.status}): ${errorText.substring(0, 50)}`);
-  }
+  if (!res.ok) throw new Error('Erro Evolution');
   const data = await res.json();
 
   // data.base64 tem o QR em base64
@@ -522,10 +522,7 @@ function startCheckingEvolution(instance) {
     try {
       const url = `${CONFIG.evolution.baseUrl}/instance/connectionState/${instance}`;
       const res = await fetch(url, {
-        headers: { 
-          'apikey': currentToken,
-          'Authorization': 'Bearer ' + currentToken
-        }
+        headers: { 'apikey': CONFIG.evolution.apiKey }
       });
       const data = await res.json();
       const state = data.instance?.state || data.state;
@@ -538,7 +535,7 @@ function startCheckingEvolution(instance) {
 
     // Renova QR a cada 30s
     if (count % 10 === 0) {
-      try { await loadQREvolution(instance, currentToken); } catch(e) {}
+      try { await loadQREvolution(instance); } catch(e) {}
     }
 
     if (count > 60) {
@@ -550,26 +547,9 @@ function startCheckingEvolution(instance) {
 
 // ---- UAZAPI ----
 async function loadQRUazapi(instance) {
-  // Busca token da instância pelo nome
-  const listUrl = `${CONFIG.uazapi.baseUrl}/instance/list`;
-
-  // Tenta pegar QR direto
   // Na UAZAPI o QR fica em /instance/qrcode com token da instância
-  // Primeiro precisa encontrar o token pelo nome
-  const res = await fetch(listUrl);
-  if (!res.ok) throw new Error('Erro UAZAPI');
-  const instances = await res.json();
-
-  let found = null;
-  if (Array.isArray(instances)) {
-    found = instances.find(i =>
-      (i.instance_name || i.name || i.instanceName || '').toUpperCase() === instance
-    );
-  }
-
-  if (!found) throw new Error('Instância não encontrada');
-
-  currentToken = found.token || found.instance_token || found.Token;
+  // O nome da instância já é validado como a própria senha/token na etapa superior
+  currentToken = document.getElementById('password').value.trim();
 
   const qrUrl = `${CONFIG.uazapi.baseUrl}/instance/qrcode`;
   const qrRes = await fetch(qrUrl, {
@@ -578,9 +558,10 @@ async function loadQRUazapi(instance) {
 
   if (!qrRes.ok) throw new Error('Erro ao gerar QR');
   const qrData = await qrRes.json();
-  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr;
+  // Lida com estruturas comuns de resposta da UAZAPI
+  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr || (qrData.data && qrData.data.qrcode) || (qrData.data && qrData.data.qr);
 
-  if (!qrBase64) throw new Error('QR não disponível');
+  if (!qrBase64) throw new Error('QR não disponível. Verifique se a instância está conectada ou se foi bem criada.');
 
   showQR(qrBase64.startsWith('data:') ? qrBase64 : 'data:image/png;base64,' + qrBase64);
   startCheckingUazapi();
