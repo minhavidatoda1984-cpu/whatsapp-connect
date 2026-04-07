@@ -454,8 +454,8 @@ let currentToken = '';
 
 async function handleLogin() {
   const apiType = document.getElementById('apiType').value;
-  const instanceName = document.getElementById('instanceName').value.trim().toUpperCase();
-  const password = document.getElementById('password').value.trim().toUpperCase();
+  const instanceName = document.getElementById('instanceName').value.trim();
+  const password = document.getElementById('password').value.trim();
   const errorMsg = document.getElementById('errorMsg');
 
   if (!instanceName || !password) {
