@@ -577,7 +577,11 @@ async function loadQRUazapi(instance) {
   }
 
   // Lida com estruturas comuns de resposta da UAZAPI
-  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr || (qrData.data && qrData.data.qrcode) || (qrData.data && qrData.data.qr) || qrData.code;
+  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr || 
+                   (qrData.data && qrData.data.qrcode) || 
+                   (qrData.data && qrData.data.qr) || 
+                   (qrData.instance && qrData.instance.qrcode) ||
+                   qrData.code;
 
   if (!qrBase64) throw new Error('QR não disponível. Verifique se a instância está conectada ou se foi bem criada.');
 
