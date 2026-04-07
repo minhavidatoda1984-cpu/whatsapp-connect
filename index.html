@@ -601,9 +601,14 @@ function startCheckingUazapi() {
         headers: { 'token': currentToken }
       });
       const data = await res.json();
-      const status = data.status || data.state || data.connectionStatus;
+      
+      const isConnected = data.instance?.status === 'connected' || 
+                          data.instance?.status === 'open' || 
+                          data.status?.connected === true ||
+                          data.state === 'connected' ||
+                          data.connectionStatus === 'connected';
 
-      if (status === 'connected' || status === 'open') {
+      if (isConnected) {
         clearInterval(checkInterval);
         showConnected();
       }
