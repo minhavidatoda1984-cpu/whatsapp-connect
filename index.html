@@ -551,15 +551,20 @@ async function loadQRUazapi(instance) {
   // O nome da instância já é validado como a própria senha/token na etapa superior
   currentToken = document.getElementById('password').value.trim();
 
-  const qrUrl = `${CONFIG.uazapi.baseUrl}/instance/qrcode`;
+  const qrUrl = `${CONFIG.uazapi.baseUrl}/instance/connect`;
   const qrRes = await fetch(qrUrl, {
-    headers: { 'token': currentToken }
+    method: 'POST',
+    headers: { 
+      'token': currentToken,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
   });
 
   if (!qrRes.ok) throw new Error('Erro ao gerar QR');
   const qrData = await qrRes.json();
   // Lida com estruturas comuns de resposta da UAZAPI
-  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr || (qrData.data && qrData.data.qrcode) || (qrData.data && qrData.data.qr);
+  const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr || (qrData.data && qrData.data.qrcode) || (qrData.data && qrData.data.qr) || qrData.code;
 
   if (!qrBase64) throw new Error('QR não disponível. Verifique se a instância está conectada ou se foi bem criada.');
 
