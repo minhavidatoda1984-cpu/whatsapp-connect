@@ -442,7 +442,8 @@ const CONFIG = {
     apiKey: '94A2203E2279-45C5-84C0-4CB1D6D4E004'
   },
   uazapi: {
-    baseUrl: 'https://prosperazap.uazapi.com'
+    baseUrl: 'https://prosperazap.uazapi.com',
+    adminToken: 'BYmtBC1cPLj5lmfFZtqjpRNqalMywFxKCPbD439yWChEGe7nZn'
   }
 };
 // =============================================
@@ -487,7 +488,7 @@ async function handleLogin() {
       await loadQRUazapi(instanceName);
     }
   } catch (e) {
-    errorMsg.textContent = 'Erro ao conectar. Verifique o nome da instância.';
+    errorMsg.textContent = e.message || 'Erro ao conectar. Verifique o nome da instância.';
     errorMsg.classList.add('active');
     btn.disabled = false;
     btn.textContent = 'Gerar QR Code →';
@@ -547,9 +548,17 @@ function startCheckingEvolution(instance) {
 
 // ---- UAZAPI ----
 async function loadQRUazapi(instance) {
-  // Na UAZAPI o QR fica em /instance/qrcode com token da instância
-  // O nome da instância já é validado como a própria senha/token na etapa superior
-  currentToken = document.getElementById('password').value.trim();
+  // Fetch using admintoken to find the correct UUID
+  const allRes = await fetch(`${CONFIG.uazapi.baseUrl}/instance/all`, {
+    headers: { 'admintoken': CONFIG.uazapi.adminToken }
+  });
+  if (!allRes.ok) throw new Error('Falha ao autenticar com UAZAPI');
+  
+  const instances = await allRes.json();
+  const instData = instances.find(i => i.name === instance);
+  
+  if (!instData) throw new Error(`Instância ${instance} não encontrada na UAZAPI.`);
+  currentToken = instData.token;
 
   const qrUrl = `${CONFIG.uazapi.baseUrl}/instance/connect`;
   const qrRes = await fetch(qrUrl, {
@@ -561,8 +570,12 @@ async function loadQRUazapi(instance) {
     body: JSON.stringify({})
   });
 
-  if (!qrRes.ok) throw new Error('Erro ao gerar QR');
   const qrData = await qrRes.json();
+  if (!qrRes.ok) {
+    if (qrData.error) throw new Error(qrData.error);
+    throw new Error('Erro ao gerar QR Code');
+  }
+
   // Lida com estruturas comuns de resposta da UAZAPI
   const qrBase64 = qrData.qrcode || qrData.base64 || qrData.qr || (qrData.data && qrData.data.qrcode) || (qrData.data && qrData.data.qr) || qrData.code;
 
